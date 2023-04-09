@@ -4,14 +4,19 @@ package com.example.stockify.activities;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -20,6 +25,7 @@ import com.example.stockify.adapters.CompanyAdapter;
 import com.example.stockify.adapters.WatchItemAdapter;
 import com.example.stockify.model.Company;
 import com.example.stockify.model.WatchItem;
+import com.google.android.material.snackbar.Snackbar;
 import com.scichart.charting.visuals.SciChartSurface;
 
 import java.util.ArrayList;
@@ -38,12 +44,12 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayoutManager manager;
     private LinearLayoutManager managerWatchList;
     private Parcelable watchListState;
+    private ScrollView constraintLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
         if (savedInstanceState != null) {
             watchListState = savedInstanceState.getParcelable(LIST_STATE_KEY);
@@ -59,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         buildRecyclerView();
         setUpSciChartLicense();
+        constraintLayout = findViewById(R.id.constraintLayout);
 
         Spinner spinner = (Spinner) findViewById(R.id.spinner);
         initializeSpinner(spinner);
@@ -79,6 +86,9 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
+
+        enableSwipeToDeleteAndUndo();
+
     }
 
     @Override
@@ -185,6 +195,10 @@ public class MainActivity extends AppCompatActivity {
                 WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
                 if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4)
                     watchArrayList.add(watchItem);
+                else if (watchArrayList.size() == 4) {
+                    Snackbar.make(constraintLayout, "You can only watch 4 at the time. Remove one by swiping to left.", Snackbar.LENGTH_LONG)
+                            .show();
+                }
                 adapterWatchList.notifyDataSetChanged();
 
                 //TODO open GraphActivity
@@ -218,4 +232,39 @@ public class MainActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
     }
+
+    private void enableSwipeToDeleteAndUndo() {
+        SwipeToDeleteCallback swipeToDeleteCallback = new SwipeToDeleteCallback(this) {
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
+
+
+                final int position = viewHolder.getAdapterPosition();
+                final WatchItem item = adapterWatchList.getData().get(position);
+
+                adapterWatchList.removeItem(position);
+                watchListRV.scrollToPosition(position);
+
+
+                Snackbar snackbar = Snackbar
+                        .make(constraintLayout, "Item was removed from the list.", Snackbar.LENGTH_LONG);
+                snackbar.setAction("UNDO", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                        adapterWatchList.restoreItem(item, position);
+                        watchListRV.scrollToPosition(position);
+                    }
+                });
+
+                snackbar.setActionTextColor(Color.parseColor("#73508D"));
+                snackbar.show();
+
+            }
+        };
+
+        ItemTouchHelper itemTouchhelper = new ItemTouchHelper(swipeToDeleteCallback);
+        itemTouchhelper.attachToRecyclerView(watchListRV);
+    }
+
 }

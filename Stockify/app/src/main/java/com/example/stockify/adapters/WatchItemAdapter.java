@@ -84,6 +84,19 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
     public void delete(int position) {
         watchItemArrayList.remove(position);
     }
+    public void removeItem(int position) {
+        watchItemArrayList.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    public void restoreItem(WatchItem item, int position) {
+        watchItemArrayList.add(position, item);
+        notifyItemInserted(position);
+    }
+
+    public ArrayList<WatchItem> getData() {
+        return watchItemArrayList;
+    }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         // creating variables for our views.
