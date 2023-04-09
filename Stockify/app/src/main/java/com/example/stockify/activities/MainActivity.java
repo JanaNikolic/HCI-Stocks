@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import com.example.stockify.R;
 import com.example.stockify.adapters.CompanyAdapter;
+import com.example.stockify.adapters.WatchItemAdapter;
 import com.example.stockify.model.Company;
 import com.scichart.charting.visuals.SciChartSurface;
 
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView companyRV;
     private CompanyAdapter adapter;
+    private WatchItemAdapter adapterWatchList;
     private ArrayList<Company> companyArrayList;
 
     @Override
