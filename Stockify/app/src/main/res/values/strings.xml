@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Stockify</string>
+    <string name="watch_list">Watch List</string>
 </resources>

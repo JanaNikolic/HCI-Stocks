@@ -1,13 +1,15 @@
 package com.example.stockify.activities;
 
-import static com.scichart.charting3d.interop.eTSRPlatform.Android;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -17,28 +19,52 @@ import com.example.stockify.R;
 import com.example.stockify.adapters.CompanyAdapter;
 import com.example.stockify.adapters.WatchItemAdapter;
 import com.example.stockify.model.Company;
+import com.example.stockify.model.WatchItem;
 import com.scichart.charting.visuals.SciChartSurface;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String LIST_STATE_KEY = "watchList";
+    private static final String LIST_ARRAY_KEY = "watchListArray";
     private RecyclerView companyRV;
+    private RecyclerView watchListRV;
     private CompanyAdapter adapter;
     private WatchItemAdapter adapterWatchList;
     private ArrayList<Company> companyArrayList;
+    private ArrayList<WatchItem> watchArrayList;
+    private RecyclerView.ItemAnimator viewAnimator;
+    private LinearLayoutManager manager;
+    private LinearLayoutManager managerWatchList;
+    private Parcelable watchListState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setUpSciChartLicense();
         setContentView(R.layout.activity_main);
+
+
+        if (savedInstanceState != null) {
+            watchListState = savedInstanceState.getParcelable(LIST_STATE_KEY);
+            watchArrayList = savedInstanceState.getParcelableArrayList(LIST_ARRAY_KEY);
+            buildWatchListView();
+        } else {
+            watchArrayList = new ArrayList<WatchItem>();
+
+            buildWatchListView();
+        }
+        companyArrayList = new ArrayList<Company>();
+        companyRV = findViewById(R.id.idRVCompanies);
+
+        buildRecyclerView();
+        setUpSciChartLicense();
+
         Spinner spinner = (Spinner) findViewById(R.id.spinner);
         initializeSpinner(spinner);
 
-        companyRV = findViewById(R.id.idRVCompanies);
-        SearchView searchView = findViewById(R.id.search);
 
+        SearchView searchView = findViewById(R.id.search);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -53,8 +79,64 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
-        buildRecyclerView();
     }
+
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        watchListState = watchListRV.getLayoutManager().onSaveInstanceState();
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        watchListRV.getLayoutManager().onRestoreInstanceState(watchListState);
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        watchListState = watchListRV.getLayoutManager().onSaveInstanceState();
+        outState.putParcelable(LIST_STATE_KEY, watchListState);
+        outState.putParcelableArrayList(LIST_ARRAY_KEY, watchArrayList);
+//        Toast.makeText(MainActivity.this, "Save " + watchArrayList.size() +"  ", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        watchArrayList = savedInstanceState.getParcelableArrayList(LIST_ARRAY_KEY);
+        watchListState = savedInstanceState.getParcelable(LIST_STATE_KEY);
+        watchListRV.getLayoutManager().onRestoreInstanceState(watchListState);
+        super.onRestoreInstanceState(savedInstanceState);
+//        Toast.makeText(MainActivity.this, "Restore " + watchArrayList.size() +"  ", Toast.LENGTH_SHORT).show();
+    }
+
+    private void buildWatchListView() {
+        watchListRV = findViewById(R.id.watchListRv);
+        adapterWatchList = new WatchItemAdapter(watchArrayList, MainActivity.this);
+        viewAnimator = new DefaultItemAnimator();
+
+        watchListRV.setHasFixedSize(true);
+
+        // setting layout manager
+        // to our recycler view.
+        managerWatchList = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
+        watchListRV.setLayoutManager(managerWatchList);
+
+        watchListRV.setItemAnimator(viewAnimator);
+        watchListRV.scrollToPosition(adapterWatchList.getItemCount() - 1);
+
+        // setting adapter to
+        // our recycler view.
+        watchListRV.setAdapter(adapterWatchList);
+
+        // TODO swipe for delete
+    }
+
+
     private void filter(String text) {
         // creating a new array list to filter our data.
         ArrayList<Company> filteredList = new ArrayList<Company>();
@@ -81,8 +163,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void buildRecyclerView() {
 
-        // below line we are creating a new array list
-        companyArrayList = new ArrayList<Company>();
+        manager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
 
         // below line is to add data to our array list.
         companyArrayList.add(new Company("AACG", "ATA Creativity Global"));
@@ -94,8 +175,23 @@ public class MainActivity extends AppCompatActivity {
         // initializing our adapter class.
         adapter = new CompanyAdapter(companyArrayList, MainActivity.this);
 
+        adapter.setCallback(new CompanyAdapter.ViewHolder.Callback() {
+            @Override
+            public void onItemClick(int position) {
+                // you can get your clicked item here
+                // now you can put texts object to another RecyclerView :)
+                Toast.makeText(MainActivity.this, "Recycle Click" + position +"  ", Toast.LENGTH_SHORT).show();
+                Company company = adapter.get(position);
+                WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+                if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4)
+                    watchArrayList.add(watchItem);
+                adapterWatchList.notifyDataSetChanged();
+
+                //TODO open GraphActivity
+            }
+        });
         // adding layout manager to our recycler view.
-        LinearLayoutManager manager = new LinearLayoutManager(this);
+
         companyRV.setHasFixedSize(true);
 
         // setting layout manager

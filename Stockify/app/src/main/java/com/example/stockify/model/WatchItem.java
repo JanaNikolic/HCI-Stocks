@@ -1,6 +1,13 @@
 package com.example.stockify.model;
 
-public class WatchItem {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import androidx.annotation.NonNull;
+
+import java.util.Objects;
+
+public class WatchItem implements Parcelable {
     private String symbol;
     private String name;
     private Double previousClose;
@@ -85,5 +92,59 @@ public class WatchItem {
 
     public void setChange(Double change) {
         this.change = change;
+    }
+
+    protected WatchItem(Parcel in) {
+        this.symbol = in.readString();
+        this.name = in.readString();
+        this.previousClose = in.readDouble();
+        this.open = in.readDouble();
+        this.high = in.readDouble();
+        this.low = in.readDouble();
+        this.volume = in.readDouble();
+        this.change = in.readDouble();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WatchItem watchItem = (WatchItem) o;
+        return Objects.equals(symbol, watchItem.symbol) && Objects.equals(name, watchItem.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(symbol, name);
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    public static final Creator<WatchItem> CREATOR = new Creator<WatchItem>() {
+        @Override
+        public WatchItem createFromParcel(Parcel in) {
+            return new WatchItem(in);
+        }
+
+        @Override
+        public WatchItem[] newArray(int size) {
+            return new WatchItem[size];
+        }
+    };
+
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeString(symbol);
+        dest.writeString(name);
+        dest.writeDouble(previousClose);
+        dest.writeDouble(open);
+        dest.writeDouble(high);
+        dest.writeDouble(low);
+        dest.writeDouble(volume);
+        dest.writeDouble(change);
     }
 }

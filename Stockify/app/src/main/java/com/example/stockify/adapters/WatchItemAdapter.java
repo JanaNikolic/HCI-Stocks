@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -100,6 +101,25 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
             watchItemHighTV = itemView.findViewById(R.id.highTv);
             percentChangeTv = itemView.findViewById(R.id.percentChangeTv);
             layout = itemView.findViewById(R.id.cardLayout);
+
+            itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View view) {
+                    int p=getLayoutPosition();
+                    System.out.println("LongClick: "+p);
+                    return true;// returning true instead of false, works for me
+                }
+            });
+
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    int p=getLayoutPosition();
+
+//                    Notes notes = mNotes.get(p);
+                    Toast.makeText(itemView.getContext(), "Recycle Click" + p +"  ", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 }
