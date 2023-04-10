@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+<androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.GraphActivity"
@@ -36,7 +42,7 @@
         android:id="@+id/surface"
         android:layout_width="match_parent"
         android:layout_marginHorizontal="20dp"
-        android:layout_height="260dp"
+        android:layout_height="340dp"
         app:layout_constraintTop_toBottomOf="@id/name"
         app:layout_constraintBottom_toTopOf="@id/nav_view"/>
 
@@ -102,7 +108,7 @@
     <View
         app:layout_constraintTop_toBottomOf="@id/previous_close_label"
         android:layout_width="match_parent"
-        android:background="@color/text"
+        android:background="#FFcfcfcf"
         android:layout_height="1dp"/>
 
     <TextView
@@ -143,7 +149,7 @@
     <View
         app:layout_constraintTop_toBottomOf="@id/open_label"
         android:layout_width="match_parent"
-        android:background="@color/text"
+        android:background="#FFcfcfcf"
         android:layout_height="1dp"/>
 
     <TextView
@@ -184,7 +190,7 @@
     <View
         app:layout_constraintTop_toBottomOf="@id/high_label"
         android:layout_width="match_parent"
-        android:background="@color/text"
+        android:background="#FFcfcfcf"
         android:layout_height="1dp"/>
 
     <TextView
@@ -225,7 +231,7 @@
     <View
         app:layout_constraintTop_toBottomOf="@id/low_label"
         android:layout_width="match_parent"
-        android:background="@color/text"
+        android:background="#FFcfcfcf"
         android:layout_height="1dp"/>
 
     <TextView
@@ -265,3 +271,6 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
+</LinearLayout>
+
