@@ -25,11 +25,18 @@ import com.example.stockify.R;
 import com.example.stockify.adapters.CompanyAdapter;
 import com.example.stockify.adapters.WatchItemAdapter;
 import com.example.stockify.model.Company;
+import com.example.stockify.model.Type;
 import com.example.stockify.model.WatchItem;
 import com.google.android.material.snackbar.Snackbar;
 import com.scichart.charting.visuals.SciChartSurface;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -105,19 +112,100 @@ public class MainActivity extends AppCompatActivity {
     private void loadCrypto() {
         crypto = new ArrayList<Company>();
 
-        crypto.add(new Company("BIT", "Bitcon"));
-        crypto.add(new Company("ETH", "Etherium"));
-        crypto.add(new Company("C2", "C2"));
+//        https://raw.githubusercontent.com/npantfoerder/cryptocurrencies/master/crypto_data.csv
+        new Thread(new Runnable()
+        {
+            public void run()
+            {
+                final List<String> addressList = getTextFromWeb("https://raw.githubusercontent.com/npantfoerder/cryptocurrencies/master/crypto_data.csv"); // format your URL
+//                System.out.println(addressList.size());
+                for (String line: addressList) {
+                    String[] tokens = line.split(",");
+                    if (tokens.length < 2)
+                        continue;
+//                    System.out.println(tokens[0]);
+//                    System.out.println(tokens[1].split("-")[0].trim());
+                    crypto.add(new Company(tokens[0], tokens[1], Type.CRYPTO));
+                }
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        //update ui
+                        buildRecyclerView();
+
+                    }
+                });
+            }
+        }).start();
+
     }
 
     private void loadStocks() {
         stocks = new ArrayList<Company>();
 
-        stocks.add(new Company("AACG", "ATA Creativity Global"));
-        stocks.add(new Company("AAPL", "Apple Inc."));
-        stocks.add(new Company("ABNB", "Airbnb, Inc."));
-        stocks.add(new Company("AMZN", "Amazon.com, Inc."));
-        stocks.add(new Company("TSLA", "Tesla, Inc."));
+
+        new Thread(new Runnable()
+        {
+            public void run()
+            {
+                final List<String> addressList = getTextFromWeb("https://nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"); // format your URL
+//                System.out.println(addressList.size());
+                for (String line: addressList) {
+                    String[] tokens = line.split("\\|");
+                    if (tokens.length < 2)
+                        continue;
+//                    System.out.println(tokens[0]);
+//                    System.out.println(tokens[1].split("-")[0].trim());
+                    stocks.add(new Company(tokens[0], tokens[1].split("-")[0].trim(), Type.STOCK));
+                }
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        //update ui
+                        buildRecyclerView();
+
+                    }
+                });
+            }
+        }).start();
+
+    }
+    public List<String> getTextFromWeb(String urlString)
+    {
+        URLConnection feedUrl;
+        List<String> placeAddress = new ArrayList<>();
+
+        try
+        {
+            Log.d("TRY block", "Pocetak");
+            feedUrl = new URL(urlString).openConnection();
+            InputStream is = feedUrl.getInputStream();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+            String line = null;
+            reader.readLine();
+            Log.d("STOCK IS", String.valueOf(is));
+            while ((line = reader.readLine()) != null) // read line by line
+            {
+                placeAddress.add(line); // add line to list
+//                System.out.println(line);
+//                Log.d("STOCK WEB", line);
+
+            }
+            is.close(); // close input stream
+
+            return placeAddress; // return whatever you need
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     @Override
@@ -216,7 +304,7 @@ public class MainActivity extends AppCompatActivity {
                 // now you can put texts object to another RecyclerView :)
                 Toast.makeText(MainActivity.this, "Recycle Click" + position +"  ", Toast.LENGTH_SHORT).show();
                 Company company = adapter.get(position);
-                WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+                WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, company.getType());
                 if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4)
                     watchArrayList.add(watchItem);
                 else if (watchArrayList.size() == 4) {

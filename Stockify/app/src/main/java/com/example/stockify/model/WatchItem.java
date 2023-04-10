@@ -16,10 +16,11 @@ public class WatchItem implements Parcelable {
     private Double low;
     private Double volume;
     private Double change;
+    private Type type;
 
     public WatchItem() {}
 
-    public WatchItem(String symbol, String name, Double previousClose, Double open, Double high, Double low, Double volume, Double change) {
+    public WatchItem(String symbol, String name, Double previousClose, Double open, Double high, Double low, Double volume, Double change, Type type) {
         this.symbol = symbol;
         this.name = name;
         this.previousClose = previousClose;
@@ -28,6 +29,7 @@ public class WatchItem implements Parcelable {
         this.low = low;
         this.volume = volume;
         this.change = change;
+        this.type = type;
     }
 
     public String getSymbol() {
@@ -103,6 +105,7 @@ public class WatchItem implements Parcelable {
         this.low = in.readDouble();
         this.volume = in.readDouble();
         this.change = in.readDouble();
+        this.type = Type.valueOf(in.readString());
     }
 
     @Override
@@ -146,5 +149,6 @@ public class WatchItem implements Parcelable {
         dest.writeDouble(low);
         dest.writeDouble(volume);
         dest.writeDouble(change);
+        dest.writeString(type.name());
     }
 }
