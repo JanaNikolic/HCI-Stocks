@@ -3,8 +3,10 @@ package com.example.stockify.activities;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -18,6 +20,7 @@ import com.example.stockify.model.MovingAverage;
 import com.example.stockify.model.PriceBar;
 import com.example.stockify.model.PriceSeries;
 import com.example.stockify.model.TimeSeriesStocks;
+import com.example.stockify.model.WatchItem;
 import com.example.stockify.retrofit.CryptoRetrofitService;
 import com.example.stockify.retrofit.CryptoService;
 import com.example.stockify.retrofit.StockRetrofitService;
@@ -72,6 +75,7 @@ public class GraphActivity extends AppCompatActivity {
     private TimeSeriesStocks tableDataStock;
     PriceSeries priceData;
     SciChartSurface surface;
+    private WatchItem item;
 
 
     @Override
@@ -79,6 +83,10 @@ public class GraphActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setUpSciChartLicense();
         setContentView(R.layout.activity_graph);
+
+        Intent intent = getIntent();
+        item = (WatchItem) intent.getParcelableExtra("item");
+
 
         SciChartBuilder.init(getApplicationContext());
         sciChartBuilder = SciChartBuilder.instance();
