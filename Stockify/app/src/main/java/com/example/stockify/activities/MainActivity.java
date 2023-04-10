@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.SearchView;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,8 +18,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -29,8 +26,13 @@ import com.example.stockify.R;
 import com.example.stockify.adapters.CompanyAdapter;
 import com.example.stockify.adapters.WatchItemAdapter;
 import com.example.stockify.model.Company;
+import com.example.stockify.model.Crypto;
+import com.example.stockify.model.CryptoData;
+import com.example.stockify.model.CryptoListData;
 import com.example.stockify.model.Type;
 import com.example.stockify.model.WatchItem;
+import com.example.stockify.retrofit.CryptoRetrofitService;
+import com.example.stockify.retrofit.CryptoService;
 import com.google.android.material.snackbar.Snackbar;
 import com.scichart.charting.visuals.SciChartSurface;
 
@@ -41,6 +43,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -63,11 +69,16 @@ public class MainActivity extends AppCompatActivity {
     private String NAME;
     private String TYPE;
     private AppCompatButton goToTopBtn;
+    private CryptoService cryptoService;
+    private CryptoRetrofitService cryptoRetrofitService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        cryptoRetrofitService = new CryptoRetrofitService();
+        cryptoService = cryptoRetrofitService.getRetrofit().create(CryptoService.class);
 
         loadCrypto();
         loadStocks();
@@ -141,32 +152,21 @@ public class MainActivity extends AppCompatActivity {
         crypto = new ArrayList<Company>();
 
 //        https://raw.githubusercontent.com/npantfoerder/cryptocurrencies/master/crypto_data.csv
-        new Thread(new Runnable()
-        {
-            public void run()
-            {
-                final List<String> addressList = getTextFromWeb("https://raw.githubusercontent.com/npantfoerder/cryptocurrencies/master/crypto_data.csv"); // format your URL
-//                System.out.println(addressList.size());
-                for (String line: addressList) {
-                    String[] tokens = line.split(",");
-                    if (tokens.length < 2)
-                        continue;
-//                    System.out.println(tokens[0]);
-//                    System.out.println(tokens[1].split("-")[0].trim());
-                    crypto.add(new Company(tokens[0], tokens[1], Type.CRYPTO));
+        Call<CryptoListData> call = cryptoService.getAll();
+        call.enqueue(new Callback<CryptoListData>() {
+            @Override
+            public void onResponse(Call<CryptoListData> call, Response<CryptoListData> response) {
+                CryptoListData body = response.body();
+                for (Crypto item : body.getData()) {
+                    crypto.add(new Company(item.getSymbol(), item.getName(), Type.CRYPTO));
                 }
-                runOnUiThread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        //update ui
-                        buildRecyclerView();
-
-                    }
-                });
             }
-        }).start();
+
+            @Override
+            public void onFailure(Call<CryptoListData> call, Throwable t) {
+
+            }
+        });
 
     }
 
@@ -244,6 +244,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        watchListState = watchListRV.getLayoutManager().onSaveInstanceState();
+    }
+
+    @Override
     protected void onResume()
     {
         super.onResume();
@@ -252,11 +258,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
 
         watchListState = watchListRV.getLayoutManager().onSaveInstanceState();
         outState.putParcelable(LIST_STATE_KEY, watchListState);
         outState.putParcelableArrayList(LIST_ARRAY_KEY, watchArrayList);
+        super.onSaveInstanceState(outState);
 //        Toast.makeText(MainActivity.this, "Save " + watchArrayList.size() +"  ", Toast.LENGTH_SHORT).show();
     }
 
@@ -341,11 +347,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 adapterWatchList.notifyDataSetChanged();
 
-                //TODO open GraphActivity
                 Intent intent = new Intent(MainActivity.this, GraphActivity.class);
                 intent.putExtra("item", watchItem);
                 startActivity(intent);
-                finish();
             }
         });
         // adding layout manager to our recycler view.
