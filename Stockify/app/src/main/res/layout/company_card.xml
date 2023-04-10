@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:padding="8dp"
             android:text="Company Symbol"
-            android:textColor="@color/white"
+            android:textColor="@color/text"
             android:textStyle="bold"
             android:letterSpacing="0.1"
             android:textSize="18sp" />
@@ -31,7 +31,7 @@
             android:paddingHorizontal="8dp"
             android:text="Company Name"
             android:textSize="12sp"
-            android:textColor="@color/white" />
+            android:textColor="@color/text" />
     </RelativeLayout>
 
 </androidx.cardview.widget.CardView>

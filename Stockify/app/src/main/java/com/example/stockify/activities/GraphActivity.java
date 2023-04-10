@@ -267,7 +267,6 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
             @Override
             public void onResponse(Call<CryptoData> call, Response<CryptoData> response) {
                 tableData = response.body();
-                Log.d("TABLE", tableData.getData().getPriceUsd().toString());
                 getGraphData();
             }
 
@@ -300,19 +299,19 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
 
             if (range.equals("day")) {
                 start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m5", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT).replace(" ", "-"), "m5", start, end);
             } else if (range.equals("hour")) {
                 start = ldt.minusHours(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m1", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT).replace(" ", "-"), "m1", start, end);
             } else if (range.equals("week")) {
                 start = ldt.minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m15", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT).replace(" ", "-"), "m15", start, end);
             } else if (range.equals("month")) {
                 start = ldt.minusMonths(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "h2", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT).replace(" ", "-"), "h2", start, end);
             } else {
                 start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m5", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT).replace(" ", "-"), "m5", start, end);
             }
         }
 
@@ -323,8 +322,12 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
                 dataSeries.clear();
                 priceData.clear();
                 for (CryptoGraphSingleData data : graphData.getData()) {
-                    PriceBar priceBar = new PriceBar(new Date(data.getTime()), (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(data.getPriceUsd()),
-                            (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(tableData.getData().getVolumeUsd24Hr()));
+                    PriceBar priceBar = new PriceBar(new Date(data.getTime()),
+                            Double.parseDouble(data.getPriceUsd()),
+                            Double.parseDouble(data.getPriceUsd()),
+                            Double.parseDouble(data.getPriceUsd()),
+                            Double.parseDouble(data.getPriceUsd()),
+                            (long) Double.parseDouble(tableData.getData().getVolumeUsd24Hr()));
                     priceData.add(priceBar);
                 }
                 dataSeries.append(priceData.getDateData(), priceData.getCloseData());
