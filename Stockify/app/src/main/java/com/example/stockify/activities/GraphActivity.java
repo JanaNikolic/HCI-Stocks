@@ -386,23 +386,31 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
                 tableDataStockHour = response.body();
 
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStockHour.getDaily().keySet()) {
-                    PriceBar priceBar = null;
-                    try {
+                try {
+                    for (String date : tableDataStockHour.getDaily().keySet()) {
+                        PriceBar priceBar = null;
                         priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getClosingPrice()),
+                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getOpeningPrice()),
+                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getHighPrice()),
+                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getLowPrice()),
+                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getClosingPrice()),
                                 (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getVolume()));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusHours(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                priceData.add(0, priceBar);
+                            }
+                        }
                     }
-                    priceData.add(0, priceBar);
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
                 pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
                 surface.getRenderableSeries().clear();
                 surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+
+                if (priceData.size() == 0)  Toast.makeText(getApplicationContext(), "There is no trading data for this given time range", Toast.LENGTH_SHORT).show();
+
             }
 
             @Override
@@ -421,23 +429,30 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
                 tableDataStockDay = response.body();
 
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStockDay.getDaily().keySet()) {
-                    PriceBar priceBar = null;
-                    try {
+                try {
+                    for (String date : tableDataStockDay.getDaily().keySet()) {
+                        PriceBar priceBar = null;
                         priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
+                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
+                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
+                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
+                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
                                 (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
-                    } catch (ParseException e) {
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                priceData.add(0, priceBar);
+                            }
+                        }
+                    }
+                } catch (ParseException e) {
                         e.printStackTrace();
                     }
-                    priceData.add(0, priceBar);
-                }
                 pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
                 surface.getRenderableSeries().clear();
                 surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+                if (priceData.size() == 0)  Toast.makeText(getApplicationContext(), "There is no trading data for this given time range", Toast.LENGTH_SHORT).show();
+
             }
 
             @Override
@@ -456,19 +471,24 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
                 tableDataStockWeek = response.body();
 
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStockWeek.getDaily().keySet()) {
-                    PriceBar priceBar = null;
-                    try {
+                try {
+                    for (String date : tableDataStockWeek.getDaily().keySet()) {
+                        PriceBar priceBar = null;
                         priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getClosingPrice()),
+                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getOpeningPrice()),
+                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getHighPrice()),
+                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getLowPrice()),
+                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getClosingPrice()),
                                 (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getVolume()));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                priceData.add(0, priceBar);
+                            }
+                        }
                     }
-                    priceData.add(0, priceBar);
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
                 pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
                 surface.getRenderableSeries().clear();
@@ -491,19 +511,24 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
                 tableDataStockMonth = response.body();
 
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStockMonth.getDaily().keySet()) {
-                    PriceBar priceBar = null;
-                    try {
+                try {
+                    for (String date : tableDataStockMonth.getDaily().keySet()) {
+                        PriceBar priceBar = null;
                         priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getClosingPrice()),
+                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getOpeningPrice()),
+                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getHighPrice()),
+                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getLowPrice()),
+                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getClosingPrice()),
                                 (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getVolume()));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusMonths(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                priceData.add(0, priceBar);
+                            }
+                        }
                     }
-                    priceData.add(0, priceBar);
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
                 pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
                 surface.getRenderableSeries().clear();
