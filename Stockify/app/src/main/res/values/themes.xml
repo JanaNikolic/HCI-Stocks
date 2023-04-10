@@ -12,6 +12,8 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <item name="android:textColorHint">@color/text</item>
+        <item name="android:textColor">@color/text</item>
         <!-- Customize your theme here. -->
+        <item name="android:navigationBarColor">@color/dark_purple</item>
     </style>
 </resources>
