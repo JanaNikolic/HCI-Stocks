@@ -59,15 +59,12 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Company> companyArrayList;
     private ArrayList<Company> crypto;
     private ArrayList<Company> stocks;
-    private ArrayList<WatchItem> watchArrayList;
+    public ArrayList<WatchItem> watchArrayList;
     private RecyclerView.ItemAnimator viewAnimator;
     private LinearLayoutManager manager;
     private LinearLayoutManager managerWatchList;
     private Parcelable watchListState;
     private ScrollView constraintLayout;
-    private String SYMBOL;
-    private String NAME;
-    private String TYPE;
     private AppCompatButton goToTopBtn;
     private CryptoService cryptoService;
     private CryptoRetrofitService cryptoRetrofitService;

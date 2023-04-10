@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.stockify.R;
@@ -57,6 +58,7 @@ import com.scichart.data.model.DoubleRange;
 import com.scichart.drawing.opengl.GLTextureView;
 import com.scichart.extensions.builders.SciChartBuilder;
 
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -98,6 +100,19 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
     private OhlcDataSeries<Date, Double> stockPrices;
     private XyDataSeries<Date, Double> maLow;
     private XyDataSeries<Date, Double> maHigh;
+    private TextView nameTV;
+    private TextView symbolTV;
+    private TextView previousCloseTv;
+    private TextView openTv;
+    private TextView highTv;
+    private TextView lowTv;
+    private TextView volumeTv;
+    private TextView previousCloseLabelTv;
+    private TextView openLabelTv;
+    private TextView highLabelTv;
+    private TextView lowLabelTv;
+    private TextView percentSignTv;
+    private DecimalFormat fmt = new DecimalFormat("#,##0.00");
 
 
 
@@ -108,6 +123,17 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         setContentView(R.layout.activity_graph);
         Intent intent = getIntent();
         watchItem = (WatchItem) intent.getParcelableExtra("item");
+
+        nameTV = findViewById(R.id.name);
+        symbolTV = findViewById(R.id.symbolTv);
+        previousCloseTv = findViewById(R.id.previousCloseTv);
+        openTv = findViewById(R.id.openTv);
+        highTv = findViewById(R.id.highTv);
+        lowTv = findViewById(R.id.lowTv);
+        volumeTv = findViewById(R.id.volumeTv);
+
+        nameTV.setText(watchItem.getName());
+        symbolTV.setText(watchItem.getSymbol());
 
         SciChartBuilder.init(getApplicationContext());
         sciChartBuilder = SciChartBuilder.instance();
@@ -262,12 +288,35 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
     }
 
     private void getTableDataCrypto() {
-        Call<CryptoData> call = cryptoService.getOneById("ethereum");
+        Call<CryptoData> call = cryptoService.getOneById(watchItem.getName().toLowerCase().replace(" ", "-"));
         call.enqueue(new Callback<CryptoData>() {
             @Override
             public void onResponse(Call<CryptoData> call, Response<CryptoData> response) {
-                tableData = response.body();
-                getGraphData();
+                if (response.code() == 200) {
+                    tableData = response.body();
+                    getGraphData();
+
+                    previousCloseLabelTv = findViewById(R.id.previous_close_label);
+                    openLabelTv = findViewById(R.id.open_label);
+                    highLabelTv = findViewById(R.id.high_label);
+                    lowLabelTv = findViewById(R.id.low_label);
+                    percentSignTv = findViewById(R.id.percent_sign);
+
+                    previousCloseLabelTv.setText("Price");
+                    openLabelTv.setText("Market Cap");
+                    highLabelTv.setText("Change Percent in 24Hr");
+                    lowLabelTv.setText("Volume Average");
+                    percentSignTv.setText("%");
+
+                    previousCloseTv.setText(fmt.format(Double.parseDouble(tableData.getData().getPriceUsd())));
+                    openTv.setText(fmt.format(Double.parseDouble(tableData.getData().getMarketCapUsd())));
+                    highTv.setText(fmt.format(Double.parseDouble(tableData.getData().getChangePercent24Hr())));
+                    lowTv.setText(fmt.format(Double.parseDouble(tableData.getData().getVwap24Hr())));
+                    volumeTv.setText(fmt.format(Double.parseDouble(tableData.getData().getVolumeUsd24Hr())));
+                } else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
+                }
+
             }
 
             @Override
@@ -318,29 +367,35 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         call.enqueue(new Callback<CryptoGraphListData>() {
             @Override
             public void onResponse(Call<CryptoGraphListData> call, Response<CryptoGraphListData> response) {
-                graphData = response.body();
-                dataSeries.clear();
-                priceData.clear();
-                for (CryptoGraphSingleData data : graphData.getData()) {
-                    PriceBar priceBar = new PriceBar(new Date(data.getTime()),
-                            Double.parseDouble(data.getPriceUsd()),
-                            Double.parseDouble(data.getPriceUsd()),
-                            Double.parseDouble(data.getPriceUsd()),
-                            Double.parseDouble(data.getPriceUsd()),
-                            (long) Double.parseDouble(tableData.getData().getVolumeUsd24Hr()));
-                    priceData.add(priceBar);
+                if (response.code() == 200) {
+                    graphData = response.body();
+                    dataSeries.clear();
+                    priceData.clear();
+                    PriceBar priceBar = null;
+                    for (CryptoGraphSingleData data : graphData.getData()) {
+                        priceBar = new PriceBar(new Date(data.getTime()),
+                                Double.parseDouble(data.getPriceUsd()),
+                                Double.parseDouble(data.getPriceUsd()),
+                                Double.parseDouble(data.getPriceUsd()),
+                                Double.parseDouble(data.getPriceUsd()),
+                                (long) Double.parseDouble(tableData.getData().getVolumeUsd24Hr()));
+                        priceData.add(priceBar);
+                    }
+                    dataSeries.append(priceData.getDateData(), priceData.getCloseData());
+                    rSeries = sciChartBuilder.newMountainSeries()
+                            .withDataSeries(dataSeries)
+                            .withStrokeStyle(Color.parseColor("#73508d"), 2f, true)
+                            .withAreaFillLinearGradientColors(Color.parseColor("#73508d"), 0x0083D2F5)
+                            .build();
+                    UpdateSuspender.using(surface, () -> {
+                        surface.getRenderableSeries().clear();
+                        Collections.addAll(surface.getRenderableSeries(), rSeries);
+                        surface.zoomExtentsX();
+                    });
+                }  else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
                 }
-                dataSeries.append(priceData.getDateData(), priceData.getCloseData());
-                rSeries = sciChartBuilder.newMountainSeries()
-                        .withDataSeries(dataSeries)
-                        .withStrokeStyle(Color.parseColor("#73508d"), 2f, true)
-                        .withAreaFillLinearGradientColors(Color.parseColor("#73508d"), 0x0083D2F5)
-                        .build();
-                UpdateSuspender.using(surface, () -> {
-                    surface.getRenderableSeries().clear();
-                    Collections.addAll(surface.getRenderableSeries(), rSeries);
-                    surface.zoomExtentsX();
-                });
+
             }
 
             @Override
@@ -386,33 +441,38 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         call.enqueue(new Callback<TimeSeriesStocks1min>() {
             @Override
             public void onResponse(Call<TimeSeriesStocks1min> call, Response<TimeSeriesStocks1min> response) {
-                tableDataStockHour = response.body();
+                if (response.code() == 200){
+                    tableDataStockHour = response.body();
 
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                try {
-                    for (String date : tableDataStockHour.getDaily().keySet()) {
-                        PriceBar priceBar = null;
-                        priceBar = new PriceBar(formatter.parse(date),
-                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getOpeningPrice()),
-                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getHighPrice()),
-                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getLowPrice()),
-                                Double.parseDouble(tableDataStockHour.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getVolume()));
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                    try {
+                        for (String date : tableDataStockHour.getDaily().keySet()) {
+                            PriceBar priceBar = null;
+                            priceBar = new PriceBar(formatter.parse(date),
+                                    Double.parseDouble(tableDataStockHour.getDaily().get(date).getOpeningPrice()),
+                                    Double.parseDouble(tableDataStockHour.getDaily().get(date).getHighPrice()),
+                                    Double.parseDouble(tableDataStockHour.getDaily().get(date).getLowPrice()),
+                                    Double.parseDouble(tableDataStockHour.getDaily().get(date).getClosingPrice()),
+                                    (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getVolume()));
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusHours(1).atZone(ZoneId.systemDefault()).toInstant()))) {
-                                priceData.add(0, priceBar);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusHours(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                    priceData.add(0, priceBar);
+                                }
                             }
                         }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
                     }
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                surface.getRenderableSeries().clear();
-                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+                    pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                    surface.getRenderableSeries().clear();
+                    surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
 
-                if (priceData.size() == 0)  Toast.makeText(getApplicationContext(), "There is no trading data for this given time range", Toast.LENGTH_SHORT).show();
+                    if (priceData.size() == 0)
+                        Toast.makeText(getApplicationContext(), "There is no trading data for this given time range", Toast.LENGTH_SHORT).show();
+                }else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
+                }
 
             }
 
@@ -429,32 +489,43 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         call.enqueue(new Callback<TimeSeriesStocks5min>() {
             @Override
             public void onResponse(Call<TimeSeriesStocks5min> call, Response<TimeSeriesStocks5min> response) {
-                tableDataStockDay = response.body();
+                if (response.code() == 200){
+                    tableDataStockDay = response.body();
 
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                try {
-                    for (String date : tableDataStockDay.getDaily().keySet()) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                    try {
                         PriceBar priceBar = null;
-                        priceBar = new PriceBar(formatter.parse(date),
-                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
-                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
-                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
-                                Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
+                        for (String date : tableDataStockDay.getDaily().keySet()) {
+                            priceBar = new PriceBar(formatter.parse(date),
+                                    Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
+                                    Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
+                                    Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
+                                    Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
+                                    (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant()))) {
-                                priceData.add(0, priceBar);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                    priceData.add(0, priceBar);
+                                }
                             }
                         }
-                    }
-                } catch (ParseException e) {
+                        if (priceBar != null) {
+                            previousCloseTv.setText(fmt.format(priceBar.getClose()));
+                            openTv.setText(fmt.format(priceBar.getOpen()));
+                            highTv.setText(fmt.format(priceBar.getHigh()));
+                            lowTv.setText(fmt.format(priceBar.getLow()));
+                            volumeTv.setText(fmt.format(priceBar.getVolume()));
+                        }
+                    } catch (ParseException e) {
                         e.printStackTrace();
                     }
-                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                surface.getRenderableSeries().clear();
-                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+                    pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                    surface.getRenderableSeries().clear();
+                    surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
                 if (priceData.size() == 0)  Toast.makeText(getApplicationContext(), "There is no trading data for this given time range", Toast.LENGTH_SHORT).show();
+                }  else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
+                }
 
             }
 
@@ -471,31 +542,42 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         call.enqueue(new Callback<TimeSeriesStocks15min>() {
             @Override
             public void onResponse(Call<TimeSeriesStocks15min> call, Response<TimeSeriesStocks15min> response) {
-                tableDataStockWeek = response.body();
+                if (response.code() == 200){
+                    tableDataStockWeek = response.body();
 
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                try {
-                    for (String date : tableDataStockWeek.getDaily().keySet()) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                    try {
                         PriceBar priceBar = null;
-                        priceBar = new PriceBar(formatter.parse(date),
-                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getOpeningPrice()),
-                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getHighPrice()),
-                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getLowPrice()),
-                                Double.parseDouble(tableDataStockWeek.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getVolume()));
+                        for (String date : tableDataStockWeek.getDaily().keySet()) {
+                            priceBar = new PriceBar(formatter.parse(date),
+                                    Double.parseDouble(tableDataStockWeek.getDaily().get(date).getOpeningPrice()),
+                                    Double.parseDouble(tableDataStockWeek.getDaily().get(date).getHighPrice()),
+                                    Double.parseDouble(tableDataStockWeek.getDaily().get(date).getLowPrice()),
+                                    Double.parseDouble(tableDataStockWeek.getDaily().get(date).getClosingPrice()),
+                                    (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getVolume()));
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant()))) {
-                                priceData.add(0, priceBar);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                    priceData.add(0, priceBar);
+                                }
                             }
                         }
+                        if (priceBar != null) {
+                            previousCloseTv.setText(fmt.format(priceBar.getClose()));
+                            openTv.setText(fmt.format(priceBar.getOpen()));
+                            highTv.setText(fmt.format(priceBar.getHigh()));
+                            lowTv.setText(fmt.format(priceBar.getLow()));
+                            volumeTv.setText(fmt.format(priceBar.getVolume()));
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
                     }
-                } catch (ParseException e) {
-                    e.printStackTrace();
+                    pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                    surface.getRenderableSeries().clear();
+                    surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+                }  else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
                 }
-                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                surface.getRenderableSeries().clear();
-                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
             }
 
             @Override
@@ -511,31 +593,42 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         call.enqueue(new Callback<TimeSeriesStocks60min>() {
             @Override
             public void onResponse(Call<TimeSeriesStocks60min> call, Response<TimeSeriesStocks60min> response) {
-                tableDataStockMonth = response.body();
+                if (response.code() == 200){
+                    tableDataStockMonth = response.body();
 
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                try {
-                    for (String date : tableDataStockMonth.getDaily().keySet()) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                    try {
                         PriceBar priceBar = null;
-                        priceBar = new PriceBar(formatter.parse(date),
-                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getOpeningPrice()),
-                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getHighPrice()),
-                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getLowPrice()),
-                                Double.parseDouble(tableDataStockMonth.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getVolume()));
+                        for (String date : tableDataStockMonth.getDaily().keySet()) {
+                            priceBar = new PriceBar(formatter.parse(date),
+                                    Double.parseDouble(tableDataStockMonth.getDaily().get(date).getOpeningPrice()),
+                                    Double.parseDouble(tableDataStockMonth.getDaily().get(date).getHighPrice()),
+                                    Double.parseDouble(tableDataStockMonth.getDaily().get(date).getLowPrice()),
+                                    Double.parseDouble(tableDataStockMonth.getDaily().get(date).getClosingPrice()),
+                                    (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getVolume()));
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusMonths(1).atZone(ZoneId.systemDefault()).toInstant()))) {
-                                priceData.add(0, priceBar);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                if (formatter.parse(date).after(Date.from(LocalDateTime.now().minusMonths(1).atZone(ZoneId.systemDefault()).toInstant()))) {
+                                    priceData.add(0, priceBar);
+                                }
                             }
                         }
+                        if (priceBar != null) {
+                            previousCloseTv.setText(fmt.format(priceBar.getClose()));
+                            openTv.setText(fmt.format(priceBar.getOpen()));
+                            highTv.setText(fmt.format(priceBar.getHigh()));
+                            lowTv.setText(fmt.format(priceBar.getLow()));
+                            volumeTv.setText(fmt.format(priceBar.getVolume()));
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
                     }
-                } catch (ParseException e) {
-                    e.printStackTrace();
+                    pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                    surface.getRenderableSeries().clear();
+                    surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+                } else if (response.code() == 404) {
+                    Toast.makeText(getApplicationContext(), "Ooops! Data not found!", Toast.LENGTH_SHORT).show();
                 }
-                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                surface.getRenderableSeries().clear();
-                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
             }
 
             @Override

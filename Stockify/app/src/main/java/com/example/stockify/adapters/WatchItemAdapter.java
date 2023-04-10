@@ -46,17 +46,17 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
         WatchItem model = watchItemArrayList.get(position);
         holder.watchItemNameTV.setText(model.getSymbol());
         holder.watchItemSymbolTV.setText(model.getName());
-        holder.watchItemHighTV.setText(fmt.format(model.getHigh()));
+//        holder.watchItemHighTV.setText(fmt.format(model.getHigh()));
 
         cardBackground = R.drawable.background_watch_list_item_red;
         holder.layout.setBackgroundResource(cardBackground);
-        holder.percentChangeTv.setBackgroundResource(percentageChangeBackground);
+//        holder.percentChangeTv.setBackgroundResource(percentageChangeBackground);
 
         if (model.getChange() > 0)
             sign = "+";
         else
             sign = "";
-        holder.percentChangeTv.setText(sign + fmt.format(model.getChange()) + "%");
+//        holder.percentChangeTv.setText(sign + fmt.format(model.getChange()) + "%");
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -103,8 +103,8 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
         // creating variables for our views.
         private final TextView watchItemNameTV;
         private final TextView watchItemSymbolTV;
-        private final TextView watchItemHighTV;
-        private final TextView percentChangeTv;
+//        private final TextView watchItemHighTV;
+//        private final TextView percentChangeTv;
         private final ConstraintLayout layout;
 
         public ViewHolder(@NonNull View itemView) {
@@ -112,8 +112,8 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
             // initializing our views with their ids.
             watchItemNameTV = itemView.findViewById(R.id.companyNameTv);
             watchItemSymbolTV = itemView.findViewById(R.id.companySymbolTv);
-            watchItemHighTV = itemView.findViewById(R.id.highTv);
-            percentChangeTv = itemView.findViewById(R.id.percentChangeTv);
+//            watchItemHighTV = itemView.findViewById(R.id.highTv);
+//            percentChangeTv = itemView.findViewById(R.id.percentChangeTv);
             layout = itemView.findViewById(R.id.cardLayout);
 
         }
