@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -39,17 +40,28 @@ public class MainActivity extends AppCompatActivity {
     private CompanyAdapter adapter;
     private WatchItemAdapter adapterWatchList;
     private ArrayList<Company> companyArrayList;
+    private ArrayList<Company> crypto;
+    private ArrayList<Company> stocks;
     private ArrayList<WatchItem> watchArrayList;
     private RecyclerView.ItemAnimator viewAnimator;
     private LinearLayoutManager manager;
     private LinearLayoutManager managerWatchList;
     private Parcelable watchListState;
     private ScrollView constraintLayout;
+    private String SYMBOL;
+    private String NAME;
+    private String TYPE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        loadCrypto();
+        loadStocks();
+
+        Spinner spinner = (Spinner) findViewById(R.id.spinner);
+        initializeSpinner(spinner);
 
         if (savedInstanceState != null) {
             watchListState = savedInstanceState.getParcelable(LIST_STATE_KEY);
@@ -67,8 +79,7 @@ public class MainActivity extends AppCompatActivity {
         setUpSciChartLicense();
         constraintLayout = findViewById(R.id.constraintLayout);
 
-        Spinner spinner = (Spinner) findViewById(R.id.spinner);
-        initializeSpinner(spinner);
+
 
 
         SearchView searchView = findViewById(R.id.search);
@@ -89,6 +100,24 @@ public class MainActivity extends AppCompatActivity {
 
         enableSwipeToDeleteAndUndo();
 
+    }
+
+    private void loadCrypto() {
+        crypto = new ArrayList<Company>();
+
+        crypto.add(new Company("BIT", "Bitcon"));
+        crypto.add(new Company("ETH", "Etherium"));
+        crypto.add(new Company("C2", "C2"));
+    }
+
+    private void loadStocks() {
+        stocks = new ArrayList<Company>();
+
+        stocks.add(new Company("AACG", "ATA Creativity Global"));
+        stocks.add(new Company("AAPL", "Apple Inc."));
+        stocks.add(new Company("ABNB", "Airbnb, Inc."));
+        stocks.add(new Company("AMZN", "Amazon.com, Inc."));
+        stocks.add(new Company("TSLA", "Tesla, Inc."));
     }
 
     @Override
@@ -175,12 +204,7 @@ public class MainActivity extends AppCompatActivity {
 
         manager = new LinearLayoutManager(this, RecyclerView.VERTICAL, false);
 
-        // below line is to add data to our array list.
-        companyArrayList.add(new Company("AACG", "ATA Creativity Global"));
-        companyArrayList.add(new Company("AAPL", "Apple Inc."));
-        companyArrayList.add(new Company("ABNB", "Airbnb, Inc."));
-        companyArrayList.add(new Company("AMZN", "Amazon.com, Inc."));
-        companyArrayList.add(new Company("TSLA", "Tesla, Inc."));
+
 
         // initializing our adapter class.
         adapter = new CompanyAdapter(companyArrayList, MainActivity.this);
@@ -231,6 +255,33 @@ public class MainActivity extends AppCompatActivity {
                 R.array.values_array, R.layout.spinner_item_list);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selected_val = spinner.getSelectedItem().toString();
+
+                if (selected_val.equals("STOCKS")) {
+                    Toast.makeText(getApplicationContext(), selected_val ,
+                            Toast.LENGTH_SHORT).show();
+                    // below line is to add data to our array list.
+                    companyArrayList = stocks;
+                    buildRecyclerView();
+
+                } else if (selected_val.equals("CRYPTO")) {
+                    Toast.makeText(getApplicationContext(), selected_val ,
+                            Toast.LENGTH_SHORT).show();
+                    // below line is to add data to our array list.
+                    companyArrayList = crypto;
+                    buildRecyclerView();
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
     }
 
     private void enableSwipeToDeleteAndUndo() {
