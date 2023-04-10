@@ -3,6 +3,7 @@ package com.example.stockify.activities;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.SearchView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.DefaultItemAnimator;
@@ -17,6 +18,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -58,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private String SYMBOL;
     private String NAME;
     private String TYPE;
+    private AppCompatButton goToTopBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +110,29 @@ public class MainActivity extends AppCompatActivity {
         });
 
         enableSwipeToDeleteAndUndo();
+
+        goToTopBtn = findViewById(R.id.button_return_to_top);
+
+        goToTopBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                companyRV.scrollToPosition(0);
+            }
+        });
+
+        companyRV.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                LinearLayoutManager linearLayoutManager = (LinearLayoutManager) companyRV.getLayoutManager();
+
+                if (linearLayoutManager != null && linearLayoutManager.findFirstCompletelyVisibleItemPosition() == 0){
+                    goToTopBtn.setVisibility(View.GONE);
+                } else if (linearLayoutManager.findFirstCompletelyVisibleItemPosition() > 3) {
+                    goToTopBtn.setVisibility(View.VISIBLE);
+                }
+            }
+        });
 
     }
 
