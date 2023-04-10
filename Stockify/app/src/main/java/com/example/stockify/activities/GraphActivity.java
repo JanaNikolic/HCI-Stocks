@@ -24,6 +24,7 @@ import com.example.stockify.model.TimeSeriesStocks15min;
 import com.example.stockify.model.TimeSeriesStocks1min;
 import com.example.stockify.model.TimeSeriesStocks60min;
 import com.example.stockify.model.TimeSeriesStocks5min;
+import com.example.stockify.model.Type;
 import com.example.stockify.model.WatchItem;
 import com.example.stockify.retrofit.CryptoRetrofitService;
 import com.example.stockify.retrofit.CryptoService;
@@ -87,12 +88,17 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
     private TimeSeriesStocks5min tableDataStockDay;
     private TimeSeriesStocks15min tableDataStockWeek;
     private TimeSeriesStocks60min tableDataStockMonth;
+    private PricePaneModel pricePaneModel;
     private PriceSeries priceData;
     private SciChartSurface surface;
     private String range;
     IXyDataSeries<Date, Double> dataSeries;
     FastMountainRenderableSeries rSeries;
-    private WatchItem item;
+    private WatchItem watchItem;
+    private OhlcDataSeries<Date, Double> stockPrices;
+    private XyDataSeries<Date, Double> maLow;
+    private XyDataSeries<Date, Double> maHigh;
+
 
 
     @Override
@@ -101,7 +107,7 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         setUpSciChartLicense();
         setContentView(R.layout.activity_graph);
         Intent intent = getIntent();
-        item = (WatchItem) intent.getParcelableExtra("item");
+        watchItem = (WatchItem) intent.getParcelableExtra("item");
 
         SciChartBuilder.init(getApplicationContext());
         sciChartBuilder = SciChartBuilder.instance();
@@ -120,8 +126,11 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         stockRetrofitService = new StockRetrofitService();
         stockService = stockRetrofitService.getRetrofit().create(StockService.class);
         priceData = new PriceSeries();
-
-        initExampleCrypto(surface);
+        if (watchItem.getType() == Type.CRYPTO) {
+            initExampleCrypto(surface);
+        } else {
+            initChartStocks(surface, new PricePaneModel(sciChartBuilder, priceData), true);
+        }
 
         bottomNavigationView = findViewById(R.id.nav_view);
         bottomNavigationView.setOnItemSelectedListener(this);
@@ -214,31 +223,33 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         }
     }
 
-    private static class PricePaneModel extends BasePaneModel {
+    private class PricePaneModel extends BasePaneModel {
 
         public PricePaneModel(SciChartBuilder builder, PriceSeries prices) {
             super(builder, PRICES, "$0.0", true);
 
             // Add the main OHLC chart
-            final OhlcDataSeries<Date, Double> stockPrices = builder.newOhlcDataSeries(Date.class, Double.class).withSeriesName("EUR/USD").build();
+            stockPrices = builder.newOhlcDataSeries(Date.class, Double.class).withSeriesName("EUR/USD").build();
             stockPrices.setAcceptsUnsortedData(true);
             stockPrices.append(prices.getDateData(), prices.getOpenData(), prices.getHighData(), prices.getLowData(), prices.getCloseData());
             addRenderableSeries(builder.newCandlestickSeries().withDataSeries(stockPrices).withYAxisId(PRICES).build());
 
-            final XyDataSeries<Date, Double> maLow = builder.newXyDataSeries(Date.class, Double.class).withSeriesName("Low Line").build();
+            maLow = builder.newXyDataSeries(Date.class, Double.class).withSeriesName("Low Line").build();
             maLow.setAcceptsUnsortedData(true);
             maLow.append(prices.getDateData(), MovingAverage.movingAverage(prices.getCloseData(), 50));
             addRenderableSeries(builder.newLineSeries().withDataSeries(maLow).withStrokeStyle(0xFFFF3333, 1f).withYAxisId(PRICES).build());
 
-            final XyDataSeries<Date, Double> maHigh = builder.newXyDataSeries(Date.class, Double.class).withSeriesName("High Line").build();
+            maHigh = builder.newXyDataSeries(Date.class, Double.class).withSeriesName("High Line").build();
             maHigh.setAcceptsUnsortedData(true);
             maHigh.append(prices.getDateData(), MovingAverage.movingAverage(prices.getCloseData(), 200));
             addRenderableSeries(builder.newLineSeries().withDataSeries(maHigh).withStrokeStyle(0xFF33DD33, 1f).withYAxisId(PRICES).build());
 
-            Collections.addAll(annotations,
-                    builder.newAxisMarkerAnnotation().withY1(stockPrices.getYValues().get(stockPrices.getCount() - 1)).withBackgroundColor(0xFFFF3333).withYAxisId(PRICES).build(),
-                    builder.newAxisMarkerAnnotation().withY1(maLow.getYValues().get(maLow.getCount() - 1)).withBackgroundColor(0xFFFF3333).withYAxisId(PRICES).build(),
-                    builder.newAxisMarkerAnnotation().withY1(maHigh.getYValues().get(maHigh.getCount() - 1)).withBackgroundColor(0xFF33DD33).withYAxisId(PRICES).build());
+            if (stockPrices.getCount() != 0) {
+                Collections.addAll(annotations,
+                        builder.newAxisMarkerAnnotation().withY1(stockPrices.getYValues().get(stockPrices.getCount() - 1)).withBackgroundColor(0xFFFF3333).withYAxisId(PRICES).build(),
+                        builder.newAxisMarkerAnnotation().withY1(maLow.getYValues().get(maLow.getCount() - 1)).withBackgroundColor(0xFFFF3333).withYAxisId(PRICES).build(),
+                        builder.newAxisMarkerAnnotation().withY1(maHigh.getYValues().get(maHigh.getCount() - 1)).withBackgroundColor(0xFF33DD33).withYAxisId(PRICES).build());
+            }
         }
     }
 
@@ -269,39 +280,15 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
     }
 
     private void getTableDataStocksDay() {
-        Call<TimeSeriesStocks5min> call = stockService.getHistoryDay("IBM", "LBUPNH3RBRISX2RV");
-        call.enqueue(new Callback<TimeSeriesStocks5min>() {
-            @Override
-            public void onResponse(Call<TimeSeriesStocks5min> call, Response<TimeSeriesStocks5min> response) {
-                tableDataStockDay = response.body();
-
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStockDay.getDaily().keySet()) {
-                    PriceBar priceBar = null;
-                    try {
-                        priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-                    priceData.add(0, priceBar);
-                }
-                Log.i("ispis", priceData.getDateData().toString());
-                final PricePaneModel pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                initChartStocks(surface, pricePaneModel, true);
-
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<TimeSeriesStocks5min> call, Throwable t) {
-                call.cancel();
-                Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
-            }
-        });
+        if (range.equals("day")) {
+            stockCallDay();
+        } else if (range.equals("hour")){
+            stockCallHour();
+        } else if (range.equals("week")){
+            stockCallWeek();
+        } else if (range.equals("month")){
+            stockCallMonth();
+        }
     }
 
     private void getGraphData() {
@@ -313,19 +300,19 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
 
             if (range.equals("day")) {
                 start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory("ethereum", "m5", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m5", start, end);
             } else if (range.equals("hour")) {
                 start = ldt.minusHours(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory("ethereum", "m1", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m1", start, end);
             } else if (range.equals("week")) {
                 start = ldt.minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory("ethereum", "m15", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m15", start, end);
             } else if (range.equals("month")) {
                 start = ldt.minusMonths(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory("ethereum", "h2", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "h2", start, end);
             } else {
                 start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                call = cryptoService.getHistory("ethereum", "m5", start, end);
+                call = cryptoService.getHistory(watchItem.getName().toLowerCase(Locale.ROOT), "m5", start, end);
             }
         }
 
@@ -366,28 +353,168 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         switch (item.getItemId()) {
             case R.id.hour:
                 range = "hour";
-                getTableDataCrypto();
-                return true;
+                break;
             case R.id.day:
                 range = "day";
-                getTableDataCrypto();
-                return true;
+                break;
             case R.id.week:
                 range = "week";
-                getTableDataCrypto();
-                return true;
+                break;
             case R.id.month:
                 range = "month";
-                getTableDataCrypto();
-                return true;
+                break;
         }
-        Log.i("Range", range);
-        return false;
+        if (watchItem.getType() == Type.CRYPTO) {
+            getTableDataCrypto();
+        } else {
+            getTableDataStocksDay();
+        }
+        return true;
     }
 
     @Override
     protected void onSaveInstanceState (Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt("selectedRange", bottomNavigationView.getSelectedItemId());
+    }
+
+    private void stockCallHour() {
+        Call<TimeSeriesStocks1min> call = stockService.getHistoryHour(watchItem.getSymbol(), "LBUPNH3RBRISX2RV");
+        call.enqueue(new Callback<TimeSeriesStocks1min>() {
+            @Override
+            public void onResponse(Call<TimeSeriesStocks1min> call, Response<TimeSeriesStocks1min> response) {
+                tableDataStockHour = response.body();
+
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                for (String date : tableDataStockHour.getDaily().keySet()) {
+                    PriceBar priceBar = null;
+                    try {
+                        priceBar = new PriceBar(formatter.parse(date),
+                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getOpeningPrice()),
+                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getHighPrice()),
+                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getLowPrice()),
+                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getClosingPrice()),
+                                (long) Double.parseDouble(tableDataStockHour.getDaily().get(date).getVolume()));
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                    priceData.add(0, priceBar);
+                }
+                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                surface.getRenderableSeries().clear();
+                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TimeSeriesStocks1min> call, Throwable t) {
+                call.cancel();
+                Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void stockCallDay() {
+        Call<TimeSeriesStocks5min> call = stockService.getHistoryDay(watchItem.getSymbol(), "LBUPNH3RBRISX2RV");
+        call.enqueue(new Callback<TimeSeriesStocks5min>() {
+            @Override
+            public void onResponse(Call<TimeSeriesStocks5min> call, Response<TimeSeriesStocks5min> response) {
+                tableDataStockDay = response.body();
+
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                for (String date : tableDataStockDay.getDaily().keySet()) {
+                    PriceBar priceBar = null;
+                    try {
+                        priceBar = new PriceBar(formatter.parse(date),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                    priceData.add(0, priceBar);
+                }
+                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                surface.getRenderableSeries().clear();
+                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TimeSeriesStocks5min> call, Throwable t) {
+                call.cancel();
+                Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void stockCallWeek() {
+        Call<TimeSeriesStocks15min> call = stockService.getHistoryWeek(watchItem.getSymbol(), "LBUPNH3RBRISX2RV");
+        call.enqueue(new Callback<TimeSeriesStocks15min>() {
+            @Override
+            public void onResponse(Call<TimeSeriesStocks15min> call, Response<TimeSeriesStocks15min> response) {
+                tableDataStockWeek = response.body();
+
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                for (String date : tableDataStockWeek.getDaily().keySet()) {
+                    PriceBar priceBar = null;
+                    try {
+                        priceBar = new PriceBar(formatter.parse(date),
+                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getOpeningPrice()),
+                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getHighPrice()),
+                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getLowPrice()),
+                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getClosingPrice()),
+                                (long) Double.parseDouble(tableDataStockWeek.getDaily().get(date).getVolume()));
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                    priceData.add(0, priceBar);
+                }
+                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                surface.getRenderableSeries().clear();
+                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TimeSeriesStocks15min> call, Throwable t) {
+                call.cancel();
+                Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void stockCallMonth() {
+        Call<TimeSeriesStocks60min> call = stockService.getHistoryMonth(watchItem.getSymbol(), "LBUPNH3RBRISX2RV");
+        call.enqueue(new Callback<TimeSeriesStocks60min>() {
+            @Override
+            public void onResponse(Call<TimeSeriesStocks60min> call, Response<TimeSeriesStocks60min> response) {
+                tableDataStockMonth = response.body();
+
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
+                for (String date : tableDataStockMonth.getDaily().keySet()) {
+                    PriceBar priceBar = null;
+                    try {
+                        priceBar = new PriceBar(formatter.parse(date),
+                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getOpeningPrice()),
+                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getHighPrice()),
+                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getLowPrice()),
+                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getClosingPrice()),
+                                (long) Double.parseDouble(tableDataStockMonth.getDaily().get(date).getVolume()));
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                    priceData.add(0, priceBar);
+                }
+                pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
+                surface.getRenderableSeries().clear();
+                surface.getRenderableSeries().addAll(pricePaneModel.renderableSeries);
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<TimeSeriesStocks60min> call, Throwable t) {
+                call.cancel();
+                Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
