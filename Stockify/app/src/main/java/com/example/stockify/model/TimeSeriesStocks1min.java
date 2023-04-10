@@ -1,15 +1,13 @@
 package com.example.stockify.model;
 
-import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import com.google.gson.internal.LinkedTreeMap;
 
 import java.util.Map;
 
-public class TimeSeriesStocks {
+public class TimeSeriesStocks1min {
     @SerializedName("Meta Data")
     private AlphaVantageTimeSeriesDailyJsonMetaData metaData;
-    @SerializedName("Time Series (5min)")
+    @SerializedName("Time Series (1min)")
     private Map<String, AlphaVantageTimeSeriesDailyJsonDaily> daily;
 
     public AlphaVantageTimeSeriesDailyJsonMetaData getMetaData() {

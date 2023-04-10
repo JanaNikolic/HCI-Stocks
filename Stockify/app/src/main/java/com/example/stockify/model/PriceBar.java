@@ -67,4 +67,16 @@ public class PriceBar {
     public long getVolume() {
         return volume;
     }
+
+    @Override
+    public String toString() {
+        return "PriceBar{" +
+                "date=" + date +
+                ", open=" + open +
+                ", high=" + high +
+                ", low=" + low +
+                ", close=" + close +
+                ", volume=" + volume +
+                '}';
+    }
 }
