@@ -261,6 +261,7 @@ public class GraphActivity extends AppCompatActivity {
                     }
                     priceData.add(0, priceBar);
                 }
+                //TODO price bar
                 Log.i("ispis", priceData.getDateData().toString());
                 final PricePaneModel pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
                 initChartStocks(surface,pricePaneModel, true);
