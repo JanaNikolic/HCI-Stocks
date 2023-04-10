@@ -48,20 +48,7 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
         holder.watchItemSymbolTV.setText(model.getName());
         holder.watchItemHighTV.setText(fmt.format(model.getHigh()));
 
-        if (model.getChange() > 0.0)
-            percentageChangeBackground = R.drawable.background_positive_change;
-        else
-            percentageChangeBackground = R.drawable.background_watch_list_item_red;
-
-        if (model.getChange() >= 0.0)
-            cardBackground = R.drawable.background_watch_list_item_green;
-        else
-            cardBackground = R.drawable.background_watch_list_item_red;
-
-        if (model.getChange() == 0.0)
-            cardBackground = R.drawable.background_stock_card;
-//        else
-//            cardBackground = R.drawable.background_watch_list_item_red;
+        cardBackground = R.drawable.background_watch_list_item_red;
         holder.layout.setBackgroundResource(cardBackground);
         holder.percentChangeTv.setBackgroundResource(percentageChangeBackground);
 

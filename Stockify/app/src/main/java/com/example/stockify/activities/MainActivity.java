@@ -160,6 +160,8 @@ public class MainActivity extends AppCompatActivity {
                 for (Crypto item : body.getData()) {
                     crypto.add(new Company(item.getSymbol(), item.getName(), Type.CRYPTO));
                 }
+                buildRecyclerView();
+
             }
 
             @Override
@@ -339,17 +341,19 @@ public class MainActivity extends AppCompatActivity {
 //                Toast.makeText(MainActivity.this, "Recycle Click" + position +"  ", Toast.LENGTH_SHORT).show();
                 Company company = adapter.get(position);
                 WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, company.getType());
-                if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4)
+                if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4) {
                     watchArrayList.add(watchItem);
+                    Intent intent = new Intent(MainActivity.this, GraphActivity.class);
+                    intent.putExtra("item", watchItem);
+                    startActivity(intent);
+                }
                 else if (watchArrayList.size() == 4) {
-                    Snackbar.make(constraintLayout, "You can only watch 4 at the time. Remove one by swiping to left.", Snackbar.LENGTH_LONG)
+                    Snackbar.make(constraintLayout, "You can only watch 4 at the time. Remove one by swiping to left.", Snackbar.LENGTH_LONG).setTextColor(Color.parseColor("#ADAFAF"))
                             .show();
                 }
                 adapterWatchList.notifyDataSetChanged();
 
-                Intent intent = new Intent(MainActivity.this, GraphActivity.class);
-                intent.putExtra("item", watchItem);
-                startActivity(intent);
+
             }
         });
         // adding layout manager to our recycler view.
@@ -386,15 +390,11 @@ public class MainActivity extends AppCompatActivity {
                 String selected_val = spinner.getSelectedItem().toString();
 
                 if (selected_val.equals("STOCKS")) {
-                    Toast.makeText(getApplicationContext(), selected_val ,
-                            Toast.LENGTH_SHORT).show();
                     // below line is to add data to our array list.
                     companyArrayList = stocks;
                     buildRecyclerView();
 
                 } else if (selected_val.equals("CRYPTO")) {
-                    Toast.makeText(getApplicationContext(), selected_val ,
-                            Toast.LENGTH_SHORT).show();
                     // below line is to add data to our array list.
                     companyArrayList = crypto;
                     buildRecyclerView();
@@ -422,7 +422,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                 Snackbar snackbar = Snackbar
-                        .make(constraintLayout, "Item was removed from the list.", Snackbar.LENGTH_LONG);
+                        .make(constraintLayout, "Item was removed from the list.", Snackbar.LENGTH_LONG).setTextColor(Color.parseColor("#ADAFAF"));
                 snackbar.setAction("UNDO", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
