@@ -4,17 +4,17 @@
     <item
         android:title="1H"
         android:tooltipText="1 Hour"
-        android:id="@+id/home"/>
+        android:id="@+id/hour"/>
     <item
         android:title="1D"
         android:tooltipText="1 Day"
-        android:id="@+id/history"/>
+        android:id="@+id/day"/>
     <item
         android:title="1W"
         android:tooltipText="1 Week"
-        android:id="@+id/inbox"/>
+        android:id="@+id/week"/>
     <item
         android:title="1M"
         android:tooltipText="1 Month"
-        android:id="@+id/profile"/>
+        android:id="@+id/month"/>
 </menu>

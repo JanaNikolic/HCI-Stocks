@@ -7,6 +7,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
@@ -17,21 +18,27 @@ import com.example.stockify.model.CryptoGraphSingleData;
 import com.example.stockify.model.MovingAverage;
 import com.example.stockify.model.PriceBar;
 import com.example.stockify.model.PriceSeries;
-import com.example.stockify.model.TimeSeriesStocks;
+import com.example.stockify.model.TimeSeriesStocks15min;
+import com.example.stockify.model.TimeSeriesStocks1min;
+import com.example.stockify.model.TimeSeriesStocks60min;
+import com.example.stockify.model.TimeSeriesStocks5min;
 import com.example.stockify.retrofit.CryptoRetrofitService;
 import com.example.stockify.retrofit.CryptoService;
 import com.example.stockify.retrofit.StockRetrofitService;
 import com.example.stockify.retrofit.StockService;
-import com.google.gson.JsonObject;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.scichart.charting.ClipMode;
 import com.scichart.charting.Direction2D;
 import com.scichart.charting.model.AnnotationCollection;
 import com.scichart.charting.model.RenderableSeriesCollection;
-import com.scichart.charting.model.dataSeries.DataSeries;
 import com.scichart.charting.model.dataSeries.IXyDataSeries;
 import com.scichart.charting.model.dataSeries.OhlcDataSeries;
 import com.scichart.charting.model.dataSeries.XyDataSeries;
 import com.scichart.charting.modifiers.AxisDragModifierBase;
+import com.scichart.charting.modifiers.Placement;
+import com.scichart.charting.modifiers.SourceMode;
+import com.scichart.charting.modifiers.TooltipModifier;
+import com.scichart.charting.modifiers.TooltipPosition;
 import com.scichart.charting.visuals.SciChartSurface;
 import com.scichart.charting.visuals.axes.AutoRange;
 import com.scichart.charting.visuals.axes.CategoryDateAxis;
@@ -41,12 +48,16 @@ import com.scichart.charting.visuals.renderableSeries.BaseRenderableSeries;
 import com.scichart.charting.visuals.renderableSeries.FastMountainRenderableSeries;
 import com.scichart.charting.visuals.synchronization.SciChartVerticalGroup;
 import com.scichart.core.framework.UpdateSuspender;
+import com.scichart.data.model.DateRange;
 import com.scichart.data.model.DoubleRange;
 import com.scichart.drawing.opengl.GLTextureView;
 import com.scichart.extensions.builders.SciChartBuilder;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
@@ -55,23 +66,29 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class GraphActivity extends AppCompatActivity {
+public class GraphActivity extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener{
     private static final String PRICES = "Prices";
 
     private StockRetrofitService stockRetrofitService;
     private CryptoRetrofitService cryptoRetrofitService;
+    private BottomNavigationView bottomNavigationView;
     private CryptoService cryptoService;
     private StockService stockService;
 
     private final SciChartVerticalGroup verticalGroup = new SciChartVerticalGroup();
     private final DoubleRange sharedXRange = new DoubleRange();
-    Boolean stock = false;
     protected SciChartBuilder sciChartBuilder;
     private CryptoData tableData;
     private CryptoGraphListData graphData;
-    private TimeSeriesStocks tableDataStock;
-    PriceSeries priceData;
-    SciChartSurface surface;
+    private TimeSeriesStocks1min tableDataStockHour;
+    private TimeSeriesStocks5min tableDataStockDay;
+    private TimeSeriesStocks15min tableDataStockWeek;
+    private TimeSeriesStocks60min tableDataStockMonth;
+    private PriceSeries priceData;
+    private SciChartSurface surface;
+    private String range;
+    IXyDataSeries<Date, Double> dataSeries;
+    FastMountainRenderableSeries rSeries;
 
 
     @Override
@@ -79,7 +96,6 @@ public class GraphActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setUpSciChartLicense();
         setContentView(R.layout.activity_graph);
-
         SciChartBuilder.init(getApplicationContext());
         sciChartBuilder = SciChartBuilder.instance();
 
@@ -98,21 +114,27 @@ public class GraphActivity extends AppCompatActivity {
         stockService = stockRetrofitService.getRetrofit().create(StockService.class);
         priceData = new PriceSeries();
 
-        if (stock) {
-            getTableDataCrypto();
+        initExampleCrypto(surface);
+
+        bottomNavigationView = findViewById(R.id.nav_view);
+        bottomNavigationView.setOnItemSelectedListener(this);
+        if (savedInstanceState != null) {
+            bottomNavigationView.setSelectedItemId(savedInstanceState.getInt("selectedRange"));
         } else {
-            getTableDataStocks();
+            bottomNavigationView.setSelectedItemId(R.id.day);
         }
     }
 
     protected void initExampleCrypto(SciChartSurface surface) {
-        final IAxis xBottomAxis = sciChartBuilder.newDateAxis().withGrowBy(0.1d, 0.1d).build();
-        final IAxis yRightAxis = sciChartBuilder.newNumericAxis().withGrowBy(0.1d, 0.1d).build();
+        final IAxis xBottomAxis = sciChartBuilder.newDateAxis().withVisibleRange(new DateRange()).build();
+        final IAxis yRightAxis = sciChartBuilder.newNumericAxis().withAutoRangeMode(AutoRange.Always).withGrowBy(0.2d, 0.2d).build();
 
-        final IXyDataSeries<Date, Double> dataSeries = sciChartBuilder.newXyDataSeries(Date.class, Double.class).build();
+
+        dataSeries = sciChartBuilder.newXyDataSeries(Date.class, Double.class).build();
+        dataSeries.setAcceptsUnsortedData(true);
         dataSeries.append(priceData.getDateData(), priceData.getCloseData());
 
-        final FastMountainRenderableSeries rSeries = sciChartBuilder.newMountainSeries()
+        rSeries = sciChartBuilder.newMountainSeries()
                 .withDataSeries(dataSeries)
                 .withStrokeStyle(Color.parseColor("#73508d"), 2f, true)
                 .withAreaFillLinearGradientColors(Color.parseColor("#73508d"), 0x0083D2F5)
@@ -124,6 +146,14 @@ public class GraphActivity extends AppCompatActivity {
             Collections.addAll(surface.getRenderableSeries(), rSeries);
             Collections.addAll(surface.getChartModifiers(), sciChartBuilder.newModifierGroupWithDefaultModifiers().build());
         });
+
+        TooltipModifier tooltipModifier = new TooltipModifier();
+        tooltipModifier.setMarkerPlacement(Placement.Top);
+        tooltipModifier.setTooltipPosition(TooltipPosition.TopRight);
+        tooltipModifier.setSourceMode(SourceMode.AllVisibleSeries);
+
+        // Add the modifier to the surface
+        surface.getChartModifiers().add(tooltipModifier);
     }
 
     private void initChartStocks(SciChartSurface surface, BasePaneModel model, boolean isMainPane) {
@@ -231,23 +261,23 @@ public class GraphActivity extends AppCompatActivity {
         });
     }
 
-    private void getTableDataStocks() {
-        Call<TimeSeriesStocks> call = stockService.getHistory("IBM", "5min", "LBUPNH3RBRISX2RV");
-        call.enqueue(new Callback<TimeSeriesStocks>() {
+    private void getTableDataStocksDay() {
+        Call<TimeSeriesStocks5min> call = stockService.getHistoryDay("IBM", "LBUPNH3RBRISX2RV");
+        call.enqueue(new Callback<TimeSeriesStocks5min>() {
             @Override
-            public void onResponse(Call<TimeSeriesStocks> call, Response<TimeSeriesStocks> response) {
-                tableDataStock = response.body();
+            public void onResponse(Call<TimeSeriesStocks5min> call, Response<TimeSeriesStocks5min> response) {
+                tableDataStockDay = response.body();
 
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.ENGLISH);
-                for (String date : tableDataStock.getDaily().keySet()) {
+                for (String date : tableDataStockDay.getDaily().keySet()) {
                     PriceBar priceBar = null;
                     try {
                         priceBar = new PriceBar(formatter.parse(date),
-                                (long) Double.parseDouble(tableDataStock.getDaily().get(date).getOpeningPrice()),
-                                (long) Double.parseDouble(tableDataStock.getDaily().get(date).getHighPrice()),
-                                (long) Double.parseDouble(tableDataStock.getDaily().get(date).getLowPrice()),
-                                (long) Double.parseDouble(tableDataStock.getDaily().get(date).getClosingPrice()),
-                                (long) Double.parseDouble(tableDataStock.getDaily().get(date).getVolume()));
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getOpeningPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getHighPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getLowPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getClosingPrice()),
+                                (long) Double.parseDouble(tableDataStockDay.getDaily().get(date).getVolume()));
                     } catch (ParseException e) {
                         e.printStackTrace();
                     }
@@ -255,12 +285,12 @@ public class GraphActivity extends AppCompatActivity {
                 }
                 Log.i("ispis", priceData.getDateData().toString());
                 final PricePaneModel pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-                initChartStocks(surface,pricePaneModel, true);
+                initChartStocks(surface, pricePaneModel, true);
 
             }
 
             @Override
-            public void onFailure(@NonNull Call<TimeSeriesStocks> call, Throwable t) {
+            public void onFailure(@NonNull Call<TimeSeriesStocks5min> call, Throwable t) {
                 call.cancel();
                 Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
             }
@@ -268,29 +298,52 @@ public class GraphActivity extends AppCompatActivity {
     }
 
     private void getGraphData() {
-        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH);
         Call<CryptoGraphListData> call = null;
-        try {
-            call = cryptoService.getHistory("ethereum", "h1", formatter.parse("02-04-2023").getTime(), formatter.parse("09-04-2023").getTime());
-        } catch (ParseException e) {
-            e.printStackTrace();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            LocalDateTime ldt = LocalDateTime.now();
+            long start = 0;
+            long end = ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            if (range.equals("day")) {
+                start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                call = cryptoService.getHistory("ethereum", "m5", start, end);
+            } else if (range.equals("hour")) {
+                start = ldt.minusHours(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                call = cryptoService.getHistory("ethereum", "m1", start, end);
+            } else if (range.equals("week")) {
+                start = ldt.minusWeeks(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                call = cryptoService.getHistory("ethereum", "m15", start, end);
+            } else if (range.equals("month")) {
+                start = ldt.minusMonths(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                call = cryptoService.getHistory("ethereum", "h2", start, end);
+            } else {
+                start = ldt.minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                call = cryptoService.getHistory("ethereum", "m5", start, end);
+            }
         }
+
         call.enqueue(new Callback<CryptoGraphListData>() {
             @Override
             public void onResponse(Call<CryptoGraphListData> call, Response<CryptoGraphListData> response) {
                 graphData = response.body();
-
+                dataSeries.clear();
+                priceData.clear();
                 for (CryptoGraphSingleData data : graphData.getData()) {
                     PriceBar priceBar = new PriceBar(new Date(data.getTime()), (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(data.getPriceUsd()),
                             (long) Double.parseDouble(data.getPriceUsd()), (long) Double.parseDouble(tableData.getData().getVolumeUsd24Hr()));
                     priceData.add(priceBar);
                 }
-
-                final PricePaneModel pricePaneModel = new PricePaneModel(sciChartBuilder, priceData);
-
-
-                initExampleCrypto(surface);
-
+                dataSeries.append(priceData.getDateData(), priceData.getCloseData());
+                rSeries = sciChartBuilder.newMountainSeries()
+                        .withDataSeries(dataSeries)
+                        .withStrokeStyle(Color.parseColor("#73508d"), 2f, true)
+                        .withAreaFillLinearGradientColors(Color.parseColor("#73508d"), 0x0083D2F5)
+                        .build();
+                UpdateSuspender.using(surface, () -> {
+                    surface.getRenderableSeries().clear();
+                    Collections.addAll(surface.getRenderableSeries(), rSeries);
+                    surface.zoomExtentsX();
+                });
             }
 
             @Override
@@ -299,5 +352,35 @@ public class GraphActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Ooops! Server not accessible!", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.hour:
+                range = "hour";
+                getTableDataCrypto();
+                return true;
+            case R.id.day:
+                range = "day";
+                getTableDataCrypto();
+                return true;
+            case R.id.week:
+                range = "week";
+                getTableDataCrypto();
+                return true;
+            case R.id.month:
+                range = "month";
+                getTableDataCrypto();
+                return true;
+        }
+        Log.i("Range", range);
+        return false;
+    }
+
+    @Override
+    protected void onSaveInstanceState (Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("selectedRange", bottomNavigationView.getSelectedItemId());
     }
 }
