@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Parcelable;
@@ -329,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(int position) {
                 // you can get your clicked item here
                 // now you can put texts object to another RecyclerView :)
-                Toast.makeText(MainActivity.this, "Recycle Click" + position +"  ", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this, "Recycle Click" + position +"  ", Toast.LENGTH_SHORT).show();
                 Company company = adapter.get(position);
                 WatchItem watchItem = new WatchItem(company.getSymbol(), company.getName(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, company.getType());
                 if (!watchArrayList.contains(watchItem) && watchArrayList.size() < 4)
@@ -341,6 +342,10 @@ public class MainActivity extends AppCompatActivity {
                 adapterWatchList.notifyDataSetChanged();
 
                 //TODO open GraphActivity
+                Intent intent = new Intent(MainActivity.this, GraphActivity.class);
+                intent.putExtra("item", watchItem);
+                startActivity(intent);
+                finish();
             }
         });
         // adding layout manager to our recycler view.

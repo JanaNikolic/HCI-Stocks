@@ -129,8 +129,9 @@ public class WatchItemAdapter  extends RecyclerView.Adapter<WatchItemAdapter.Vie
                 public void onClick(View view) {
                     int p=getLayoutPosition();
 
-//                    Notes notes = mNotes.get(p);
+                    //TODO open Graph
                     Toast.makeText(itemView.getContext(), "Recycle Click" + p +"  ", Toast.LENGTH_SHORT).show();
+
                 }
             });
         }

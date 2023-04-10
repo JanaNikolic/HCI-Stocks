@@ -151,4 +151,19 @@ public class WatchItem implements Parcelable {
         dest.writeDouble(change);
         dest.writeString(type.name());
     }
+
+    @Override
+    public String toString() {
+        return "WatchItem{" +
+                "symbol='" + symbol + '\'' +
+                ", name='" + name + '\'' +
+                ", previousClose=" + previousClose +
+                ", open=" + open +
+                ", high=" + high +
+                ", low=" + low +
+                ", volume=" + volume +
+                ", change=" + change +
+                ", type=" + type +
+                '}';
+    }
 }
