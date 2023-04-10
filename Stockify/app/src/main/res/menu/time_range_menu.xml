@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:title="1H"
+        android:tooltipText="1 Hour"
+        android:id="@+id/hour"/>
+    <item
+        android:title="1D"
+        android:tooltipText="1 Day"
+        android:id="@+id/day"/>
+    <item
+        android:title="1W"
+        android:tooltipText="1 Week"
+        android:id="@+id/week"/>
+    <item
+        android:title="1M"
+        android:tooltipText="1 Month"
+        android:id="@+id/month"/>
+</menu>
