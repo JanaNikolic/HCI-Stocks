@@ -3,8 +3,10 @@ package com.example.stockify.activities;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
@@ -22,6 +24,7 @@ import com.example.stockify.model.TimeSeriesStocks15min;
 import com.example.stockify.model.TimeSeriesStocks1min;
 import com.example.stockify.model.TimeSeriesStocks60min;
 import com.example.stockify.model.TimeSeriesStocks5min;
+import com.example.stockify.model.WatchItem;
 import com.example.stockify.retrofit.CryptoRetrofitService;
 import com.example.stockify.retrofit.CryptoService;
 import com.example.stockify.retrofit.StockRetrofitService;
@@ -89,6 +92,7 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
     private String range;
     IXyDataSeries<Date, Double> dataSeries;
     FastMountainRenderableSeries rSeries;
+    private WatchItem item;
 
 
     @Override
@@ -96,6 +100,9 @@ public class GraphActivity extends AppCompatActivity implements BottomNavigation
         super.onCreate(savedInstanceState);
         setUpSciChartLicense();
         setContentView(R.layout.activity_graph);
+        Intent intent = getIntent();
+        item = (WatchItem) intent.getParcelableExtra("item");
+
         SciChartBuilder.init(getApplicationContext());
         sciChartBuilder = SciChartBuilder.instance();
 
